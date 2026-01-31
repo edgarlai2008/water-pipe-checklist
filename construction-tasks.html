@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工程管理系統 - Construction Task Manager</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 20px; color: #fff; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 30px; color: #00d4ff; font-size: 2em; }
+        .form-card { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; margin-bottom: 25px; backdrop-filter: blur(10px); }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        label { margin-bottom: 5px; color: #aaa; font-size: 0.9em; }
+        input, select, textarea { padding: 12px; border: none; border-radius: 8px; background: rgba(255,255,255,0.15); color: #fff; font-size: 1em; }
+        input:focus, select:focus, textarea:focus { outline: none; background: rgba(255,255,255,0.25); }
+        textarea { resize: vertical; min-height: 60px; }
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,212,255,0.4); }
+        .btn-danger { background: linear-gradient(135deg, #ff4757, #cc0022); color: #fff; }
+        .task-list { display: grid; gap: 15px; }
+        .task-card { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; backdrop-filter: blur(10px); border-left: 4px solid #00d4ff; }
+        .task-card.priority-high { border-left-color: #ff4757; }
+        .task-card.priority-medium { border-left-color: #ffa502; }
+        .task-card.priority-low { border-left-color: #2ed573; }
+        .task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .判頭名 { font-size: 1.2em; font-weight: bold; color: #00d4ff; }
+        .優先度 { padding: 4px 12px; border-radius: 20px; font-size: 0.8em; }
+        .優先度.high { background: #ff4757; }
+        .優先度.medium { background: #ffa502; }
+        .優先度.low { background: #2ed573; }
+        .task-content { color: #ddd; margin-bottom: 10px; }
+        .task-dates { display: flex; gap: 20px; font-size: 0.9em; color: #aaa; }
+        .task-result { margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .task-actions { margin-top: 15px; display: flex; gap: 10px; }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; border: none; }
+        .filter-btn.active { background: #00d4ff; color: #000; }
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .完成 { text-decoration: line-through; opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ 工程管理系統</h1>
+        
+        <!-- 新增任務表單 -->
+        <div class="form-card">
+            <h2 style="margin-bottom: 20px; color: #00d4ff;">➕ 新增任務</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>判頭名</label>
+                    <input type="text" id="判頭名" placeholder="輸入判頭名">
+                </div>
+                <div class="form-group">
+                    <label>優先度</label>
+                    <select id="優先度">
+                        <option value="high">🔴 高</option>
+                        <option value="medium" selected>🟡 中</option>
+                        <option value="low">🟢 低</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>需處理內容</label>
+                <textarea id="需處理內容" placeholder="描述需要處理的工程事項..."></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>發現問題日期</label>
+                    <input type="date" id="發現問題日期">
+                </div>
+                <div class="form-group">
+                    <label>截止日期</label>
+                    <input type="date" id="截止日期">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addTask()">✅ 新增任務</button>
+        </div>
+
+        <!-- 篩選器 -->
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="filterTasks('all')">全部</button>
+            <button class="filter-btn" onclick="filterTasks('high')">🔴 高優先度</button>
+            <button class="filter-btn" onclick="filterTasks('medium')">🟡 中優先度</button>
+            <button class="filter-btn" onclick="filterTasks('low')">🟢 低優先度</button>
+        </div>
+
+        <!-- 任務列表 -->
+        <div id="taskList" class="task-list"></div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('constructionTasks') || '[]');
+
+        function saveTasks() {
+            localStorage.setItem('constructionTasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function addTask() {
+            const task = {
+                id: Date.now(),
+                判頭名: document.getElementById('判頭名').value,
+                優先度: document.getElementById('優先度').value,
+                需處理內容: document.getElementById('需處理內容').value,
+                發現問題日期: document.getElementById('發現問題日期').value,
+                截止日期: document.getElementById('截止日期').value,
+                處理結果: '',
+                完成: false,
+                建立時間: new Date().toISOString()
+            };
+
+            if (!task.判頭名 || !task.需處理內容) {
+                alert('請填寫判頭名同需處理內容！');
+                return;
+            }
+
+            tasks.unshift(task);
+            saveTasks();
+            clearForm();
+        }
+
+        function clearForm() {
+            document.getElementById('判頭名').value = '';
+            document.getElementById('需處理內容').value = '';
+            document.getElementById('發現問題日期').value = '';
+            document.getElementById('截止日期').value = '';
+            document.getElementById('優先度').value = 'medium';
+        }
+
+        function deleteTask(id) {
+            if (confirm('確定刪除呢個任務？')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveTasks();
+            }
+        }
+
+        function toggleComplete(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.完成 = !task.完成;
+                saveTasks();
+            }
+        }
+
+        function updateResult(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.處理結果 = prompt('輸入處理結果：', task.處理結果);
+                saveTasks();
+            }
+        }
+
+        function filterTasks(priority) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderTasks(priority);
+        }
+
+        function renderTasks(filter = 'all') {
+            const container = document.getElementById('taskList');
+            
+            let filteredTasks = tasks;
+            if (filter !== 'all') {
+                filteredTasks = tasks.filter(t => t.優先度 === filter);
+            }
+
+            if (filteredTasks.length === 0) {
+                container.innerHTML = '<div class="empty-state">暫時冇任務</div>';
+                return;
+            }
+
+            container.innerHTML = filteredTasks.map(task => `
+                <div class="task-card priority-${task.優先度} ${task.完成 ? '完成' : ''}">
+                    <div class="task-header">
+                        <span class="判頭名">👷 ${task.判頭名}</span>
+                        <span class="優先度 ${task.優先度}">${task.優先度 === 'high' ? '🔴 高' : task.優先度 === 'medium' ? '🟡 中' : '🟢 低'}</span>
+                    </div>
+                    <div class="task-content">${task.需處理內容}</div>
+                    <div class="task-dates">
+                        <span>📅 發現: ${task.發現問題日期 || '未填'}</span>
+                        <span>⏰ 截止: ${task.截止日期 || '未填'}</span>
+                    </div>
+                    ${task.處理結果 ? `<div class="task-result">✅ 處理結果: ${task.處理結果}</div>` : ''}
+                    <div class="task-actions">
+                        <button class="btn btn-primary" onclick="toggleComplete(${task.id})">${task.完成 ? '↩️ 未完成' : '✅ 完成'}</button>
+                        <button class="btn" onclick="updateResult(${task.id})">📝 結果</button>
+                        <button class="btn btn-danger" onclick="deleteTask(${task.id})">🗑️ 刪除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 初始化
+        renderTasks();
+    </script>
+</body>
+</html>
