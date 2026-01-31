@@ -33,7 +33,7 @@
         .優先度.low { background: #2ed573; }
         .task-content { color: #ddd; margin-bottom: 10px; }
         .task-dates { display: flex; gap: 20px; font-size: 0.9em; color: #aaa; }
-        .task-result { margin-top: 10px;px; background: rgba(0,0,0, padding: 100.2); border-radius: 8px; }
+        .task-result { margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }
         .task-actions { margin-top: 15px; display: flex; gap: 10px; }
         .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .filter-btn { padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; border: none; }
@@ -52,7 +52,16 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>判頭名</label>
-                    <input type="text" id="判頭名" placeholder="輸入判頭名">
+                    <select id="判頭名">
+                        <option value="">選擇判頭...</option>
+                        <option value="PHM">PHM</option>
+                        <option value="創基">創基</option>
+                        <option value="振源">振源</option>
+                        <option value="勝良記">勝良記</option>
+                        <option value="旭暉">旭暉</option>
+                        <option value="聚龍">聚龍</option>
+                        <option value="其他">其他</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>優先度</label>
@@ -101,9 +110,17 @@
         }
 
         function addTask() {
+            let foremanName = document.getElementById('判頭名').value;
+            
+            // 如果揀咗「其他」，彈窗問自選名
+            if (foremanName === '其他') {
+                foremanName = prompt('輸入判頭名稱：', '');
+                if (!foremanName) return; // 如果冇輸入就唔submit
+            }
+            
             const task = {
                 id: Date.now(),
-                判頭名: document.getElementById('判頭名').value,
+                判頭名: foremanName,
                 優先度: document.getElementById('優先度').value,
                 需處理內容: document.getElementById('需處理內容').value,
                 發現問題日期: document.getElementById('發現問題日期').value,
@@ -114,7 +131,7 @@
             };
 
             if (!task.判頭名 || !task.需處理內容) {
-                alert('請填寫判頭名同需處理內容！');
+                alert('請選擇/輸入判頭名同填寫需處理內容！');
                 return;
             }
 
